@@ -69,7 +69,7 @@ func (m Model) connect() tea.Msg {
 		return errMsg{id: m.id, err: fmt.Errorf("bubblessh: stdout pipe: %w", err)}
 	}
 	// With a PTY allocated, the remote shell's stderr is written to the
-	// same pty device as stdout, so there is no separate stream to read here — 
+	// same pty device as stdout, so there is no separate stream to read here —
 	// this mirrors what a normal interactive `ssh` session does.
 
 	if err := session.Shell(); err != nil {
