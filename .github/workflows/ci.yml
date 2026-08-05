@@ -30,7 +30,18 @@ jobs:
           go-version-file: go.mod
           cache: true
 
-      - name: Verify go.mod / go.sum are tidy
+      # Two separate Go modules live in this repo: the library at the root,
+      # and examples/ on its own — see examples/go.mod for why (keeps
+      # demo-only deps like bubbles/lipgloss out of the library's go.mod).
+      # Everything below runs for each module in turn.
+
+      - name: Verify root go.mod / go.sum are tidy
+        run: |
+          go mod tidy
+          git diff --exit-code go.mod go.sum
+
+      - name: Verify examples/go.mod / go.sum are tidy
+        working-directory: examples
         run: |
           go mod tidy
           git diff --exit-code go.mod go.sum
@@ -45,11 +56,19 @@ jobs:
             exit 1
           fi
 
-      - name: Build
+      - name: Build (root module)
         run: go build ./...
 
-      - name: Vet
+      - name: Vet (root module)
         run: go vet ./...
 
-      - name: Test
+      - name: Test (root module)
         run: go test -race -v ./...
+
+      - name: Build (examples module)
+        working-directory: examples
+        run: go build ./...
+
+      - name: Vet (examples module)
+        working-directory: examples
+        run: go vet ./...

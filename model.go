@@ -7,6 +7,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync/atomic"
 	"time"
 
@@ -182,8 +183,7 @@ func (m Model) Content() string {
 // Connected reports whether the SSH session is currently up.
 func (m Model) Connected() bool { return m.state == stateConnected }
 
-// Err returns the last error (connection failure or unexpected close), if
-// any.
+// Err returns the last error (connection failure or unexpected close), if any.
 func (m Model) Err() error { return m.err }
 
 // SetSize resizes the PTY, both locally (the virtual terminal emulator) and
@@ -242,7 +242,15 @@ func (m Model) dialAddr() string {
 	if _, _, err := net.SplitHostPort(m.addr); err == nil {
 		return m.addr
 	}
-	return net.JoinHostPort(m.addr, fmt.Sprintf("%d", m.port))
+	host := m.addr
+	if strings.HasPrefix(host, "[") && strings.HasSuffix(host, "]") {
+		// A bracketed IPv6 literal with no port, e.g. "[2001:db8::1]".
+		// JoinHostPort adds its own brackets around anything containing a
+		// colon — without stripping these first we'd end up with
+		// "[[2001:db8::1]]:22", which is invalid.
+		host = host[1 : len(host)-1]
+	}
+	return net.JoinHostPort(host, fmt.Sprintf("%d", m.port))
 }
 
 // defaultKnownHosts returns the default ~/.ssh/known_hosts path, resolved.

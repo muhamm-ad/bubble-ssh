@@ -30,7 +30,11 @@ func TestDialAddr(t *testing.T) {
 	}{
 		{"example.com", 22, "example.com:22"},
 		{"example.com", 2222, "example.com:2222"},
-		{"example.com:2200", 22, "example.com:2200"}, // explicit port wins
+		{"example.com:2200", 22, "example.com:2200"},     // explicit port wins
+		{"2001:db8::1", 22, "[2001:db8::1]:22"},          // bare IPv6, no brackets, no port
+		{"::1", 22, "[::1]:22"},                          // loopback IPv6
+		{"[2001:db8::1]", 22, "[2001:db8::1]:22"},        // bracketed IPv6, no port — was double-bracketed before the fix
+		{"[2001:db8::1]:2222", 22, "[2001:db8::1]:2222"}, // bracketed IPv6, explicit port wins
 	}
 	for _, c := range cases {
 		m := New(c.addr, WithPort(c.port))

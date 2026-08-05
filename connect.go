@@ -10,8 +10,8 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-// connect dials, authenticates, opens a session, requests a PTY, and starts
-// a shell. It's a plain tea.Cmd (Bubble Tea already runs Cmds on their own
+// connect dials, authenticates, opens a session, requests a PTY, and starts a shell.
+// It's a plain tea.Cmd (Bubble Tea already runs Cmds on their own
 // goroutine), so it can block freely.
 func (m Model) connect() tea.Msg {
 	hostKeyCallback, err := m.resolveHostKeyCallback()
@@ -69,8 +69,8 @@ func (m Model) connect() tea.Msg {
 		return errMsg{id: m.id, err: fmt.Errorf("bubblessh: stdout pipe: %w", err)}
 	}
 	// With a PTY allocated, the remote shell's stderr is written to the
-	// same pty device as stdout, so there is no separate stream to read
-	// here — this mirrors what a normal interactive `ssh` session does.
+	// same pty device as stdout, so there is no separate stream to read here — 
+	// this mirrors what a normal interactive `ssh` session does.
 
 	if err := session.Shell(); err != nil {
 		_ = session.Close()

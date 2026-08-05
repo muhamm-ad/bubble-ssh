@@ -4,7 +4,7 @@
 // each one tags its internal messages with its own id, so a parent can
 // broadcast any non-key message to every child without routing it by hand.
 //
-//	go run ./examples/split-pane -left alice@host1:22 -right bob@host2:22
+//	go run ./split-pane -left alice@host1:22 -right bob@host2:22
 package main
 
 import (
@@ -15,7 +15,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	lipgloss "charm.land/lipgloss/v2"
-	bubblessh "github.com/muhamm-ad/bubble-ssh"
+	"github.com/muhamm-ad/bubble-ssh"
 )
 
 type appModel struct {

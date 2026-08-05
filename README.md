@@ -3,7 +3,7 @@
 An interactive SSH terminal as a [Bubble Tea v2](https://charm.land/bubbletea/v2) component. `bubblessh.Model` dials an SSH server, requests a PTY, starts a shell, and renders it exactly like a normal `ssh` session would — keystrokes go to the remote shell, remote output (colors, cursor movement, full-screen apps like `vim`/`htop`) is interpreted and rendered back. Drop it in as your whole program, or embed it as one pane among several.
 
 ```go
-import "github.com/muhamm-ad/bubblessh"
+import "github.com/muhamm-ad/bubble-ssh"
 
 m := bubblessh.New("example.com:22",
     bubblessh.WithUser("alice"),
@@ -19,12 +19,12 @@ p.Run()
 ## Install
 
 ```bash
-go get github.com/muhamm-ad/bubblessh
+go get github.com/muhamm-ad/bubble-ssh
 ```
 
 ## Why this needed writing (and what it's built on)
 
-As of August 2026, we didn't find a single off-the-shelf "SSH pane for Bubble Tea" package. `bubblessh` wires together three libraries that each do one part well:
+As of August 2026, we didn't find a single off-the-shelf "SSH pane for Bubble Tea" package. `bubble-ssh` wires together three libraries that each do one part well:
 
 | Library | Role |
 | --- | --- |
@@ -35,6 +35,14 @@ As of August 2026, we didn't find a single off-the-shelf "SSH pane for Bubble Te
 See [doc.go](./doc.go) for an architecture diagram of how data flows between them.
 
 ## Usage patterns
+
+Examples live in their own Go module (`examples/go.mod`) so demo-only dependencies like `bubbles`/`lipgloss` never end up in this library's own `go.mod` — run them from inside `examples/`, not the repo root:
+
+```bash
+cd examples
+go run ./basic
+go run ./split-pane
+```
 
 ### As the whole program
 
@@ -69,11 +77,13 @@ Several auth methods (password, key, agent) can be combined; the client tries ea
 
 ### Host key verification
 
-If you don't call `WithKnownHostsFile`, `WithAcceptNewHostKeys`, or `WithInsecureIgnoreHostKey`, `bubblessh` tries `~/.ssh/known_hosts` and returns a clear error if it can't find it — it will **not** silently skip verification. This is a deliberate "fail closed" default. For a real host you'll reconnect to, `WithAcceptNewHostKeys(path)` is the closest equivalent to the interactive "are you sure you want to continue connecting?" prompt a normal `ssh` client shows (bubblessh can't show that prompt itself — `Connect` runs on a background goroutine while Bubble Tea already owns the terminal — so it trades the prompt for automatic, remembered trust instead). Reach for `WithInsecureIgnoreHostKey()` only where MITM risk genuinely doesn't matter, e.g. a local container — it trusts every connection, forever, with no memory of anything.
+If you don't call `WithKnownHostsFile`, `WithAcceptNewHostKeys`, or `WithInsecureIgnoreHostKey`, `bubblessh` tries `~/.ssh/known_hosts` and returns a clear error if it can't find it — it will **not** silently skip verification. This is a deliberate "fail closed" default. For a real host you'll reconnect to, `WithAcceptNewHostKeys(path)` is the closest equivalent to the interactive "are you sure you want to continue connecting?" prompt a normal `ssh` client shows (bubble-ssh can't show that prompt itself — `Connect` runs on a background goroutine while Bubble Tea already owns the terminal — so it trades the prompt for automatic, remembered trust instead). Reach for `WithInsecureIgnoreHostKey()` only where MITM risk genuinely doesn't matter, e.g. a local container — it trusts every connection, forever, with no memory of anything.
 
 ## A note on the dependency versions
 
 This was written in July 2026, right after Bubble Tea shipped a stable v2 (new module path `charm.land/bubbletea/v2`, rebuilt on `charmbracelet/ultraviolet` primitives — `Model.View()` now returns a `tea.View` instead of a plain `string`, and `KeyMsg` is an interface implemented by `KeyPressMsg`/`KeyReleaseMsg`). `charmbracelet/x/vt` is explicitly labeled experimental by Charm, so its API can still move. Every method/type this package calls was checked against the actual upstream source at the time of writing, but if `go build` complains after you `go mod tidy`, it's most likely a small rename in `x/vt` or `ultraviolet`; the fix is almost always a one-line adjustment in `keys.go`, `mouse.go`, or `connect.go`.
+
+The root `go.mod` only ever needs `golang.org/x/crypto`, `charm.land/bubbletea/v2`, `github.com/charmbracelet/x/vt`, and `github.com/charmbracelet/ultraviolet` — the library itself doesn't touch `lipgloss`, which `examples/split-pane` needs for its side-by-side layout. That lives in `examples/go.mod` instead, same reasoning `charm.land/bubbletea/v2` itself uses for its own `examples/` directory: demo-only dependencies shouldn't show up as required dependencies, or shift minimum-version floors, for someone who only imports the library.
 
 ## License
 
