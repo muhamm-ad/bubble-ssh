@@ -1,0 +1,3 @@
+[submodule "examples/lazyssh"]
+	path = examples/lazyssh
+	url = https://github.com/muhamm-ad/lazyssh.git
