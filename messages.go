@@ -1,4 +1,4 @@
-package bubble_ssh
+package bubblessh
 
 import (
 	"context"
@@ -20,23 +20,25 @@ const (
 	stateError
 )
 
-// Every internal message carries the id of the Model instance it belongs
-// to. This is what makes it safe to run several bubble_ssh.Model instances in
-// the same Bubble Tea program (e.g. a split-pane multi-server view): a
-// parent can forward any message to every child's Update() unconditionally
+// Every internal message carries the id of the Model instance it belongs to.
+// This is what makes it safe to run several bubblessh.Model instances in
+// the same Bubbletea program (e.g. a split-pane multi-server view): a parent
+// can forward any message to every child's Update() unconditionally
 // — each Model silently ignores messages that aren't its own instead of
 // requiring the caller to route them correctly by hand.
 
-// connectedMsg is delivered once the SSH connection, PTY, and shell are all
-// up. It carries the live handles that Update() will store on the Model.
+// connectedMsg is delivered once the SSH connection, PTY, and shell are all up.
+// It carries the live handles that Update() will store on the Model.
 type connectedMsg struct {
-	id      uint64
+	id uint64
+
 	client  *ssh.Client
 	session *ssh.Session
 	stdin   io.WriteCloser
 	term    *vt.Emulator
-	outCh   chan tea.Msg
-	cancel  context.CancelFunc
+
+	outCh  chan tea.Msg
+	cancel context.CancelFunc
 }
 
 // outputMsg is a chunk of raw bytes read from the remote shell's stdout.

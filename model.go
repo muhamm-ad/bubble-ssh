@@ -1,4 +1,4 @@
-package bubble_ssh
+package bubblessh
 
 import (
 	"context"
@@ -263,10 +263,10 @@ func (m Model) resolveHostKeyCallback() (ssh.HostKeyCallback, error) {
 	}
 	path, err := defaultKnownHosts()
 	if err != nil {
-		return nil, fmt.Errorf("bubble_ssh: no host key verification configured and couldn't resolve a default known_hosts (%w) — call WithKnownHostsFile or WithInsecureIgnoreHostKey explicitly", err)
+		return nil, fmt.Errorf("bubblessh: no host key verification configured and couldn't resolve a default known_hosts (%w) — call WithKnownHostsFile, WithAcceptNewHostKeys, or WithInsecureIgnoreHostKey explicitly", err)
 	}
 	if _, err := os.Stat(path); err != nil {
-		return nil, fmt.Errorf("bubble_ssh: no host key verification configured and %s doesn't exist — call WithKnownHostsFile or WithInsecureIgnoreHostKey explicitly", path)
+		return nil, fmt.Errorf("bubblessh: no host key verification configured and %s doesn't exist — call WithKnownHostsFile, WithAcceptNewHostKeys, or WithInsecureIgnoreHostKey explicitly", path)
 	}
 	return knownhosts.New(path)
 }

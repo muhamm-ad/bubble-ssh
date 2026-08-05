@@ -1,4 +1,4 @@
-package bubble_ssh
+package bubblessh
 
 import (
 	"context"
@@ -28,13 +28,13 @@ func (m Model) connect() tea.Msg {
 
 	client, err := ssh.Dial("tcp", m.dialAddr(), cfg)
 	if err != nil {
-		return errMsg{id: m.id, err: fmt.Errorf("bubble_ssh: dial %s: %w", m.dialAddr(), err)}
+		return errMsg{id: m.id, err: fmt.Errorf("bubblessh: dial %s: %w", m.dialAddr(), err)}
 	}
 
 	session, err := client.NewSession()
 	if err != nil {
 		_ = client.Close()
-		return errMsg{id: m.id, err: fmt.Errorf("bubble_ssh: new session: %w", err)}
+		return errMsg{id: m.id, err: fmt.Errorf("bubblessh: new session: %w", err)}
 	}
 
 	for k, v := range m.env {
@@ -52,21 +52,21 @@ func (m Model) connect() tea.Msg {
 	if err := session.RequestPty(m.term, m.height, m.width, modes); err != nil {
 		_ = session.Close()
 		_ = client.Close()
-		return errMsg{id: m.id, err: fmt.Errorf("bubble_ssh: request pty: %w", err)}
+		return errMsg{id: m.id, err: fmt.Errorf("bubblessh: request pty: %w", err)}
 	}
 
 	stdin, err := session.StdinPipe()
 	if err != nil {
 		_ = session.Close()
 		_ = client.Close()
-		return errMsg{id: m.id, err: fmt.Errorf("bubble_ssh: stdin pipe: %w", err)}
+		return errMsg{id: m.id, err: fmt.Errorf("bubblessh: stdin pipe: %w", err)}
 	}
 
 	stdout, err := session.StdoutPipe()
 	if err != nil {
 		_ = session.Close()
 		_ = client.Close()
-		return errMsg{id: m.id, err: fmt.Errorf("bubble_ssh: stdout pipe: %w", err)}
+		return errMsg{id: m.id, err: fmt.Errorf("bubblessh: stdout pipe: %w", err)}
 	}
 	// With a PTY allocated, the remote shell's stderr is written to the
 	// same pty device as stdout, so there is no separate stream to read
@@ -75,7 +75,7 @@ func (m Model) connect() tea.Msg {
 	if err := session.Shell(); err != nil {
 		_ = session.Close()
 		_ = client.Close()
-		return errMsg{id: m.id, err: fmt.Errorf("bubble_ssh: start shell: %w", err)}
+		return errMsg{id: m.id, err: fmt.Errorf("bubblessh: start shell: %w", err)}
 	}
 
 	term := vt.NewEmulator(m.width, m.height)

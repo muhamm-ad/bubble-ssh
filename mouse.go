@@ -1,4 +1,4 @@
-package bubble_ssh
+package bubblessh
 
 import (
 	tea "charm.land/bubbletea/v2"

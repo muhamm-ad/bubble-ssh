@@ -1,0 +1,16 @@
+name: Release
+
+on:
+  release:
+    types: [created]
+
+permissions:
+  contents: read
+
+jobs:
+  pull:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Pull new module version into the Go proxy cache
+        uses: andrewslotin/go-proxy-pull-action@v1.1.0

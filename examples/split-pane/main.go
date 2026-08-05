@@ -1,6 +1,6 @@
 // Command split-pane connects to two hosts at once and shows them side by
 // side, Tab to switch which pane receives keystrokes. It demonstrates that
-// bubble_ssh.Model instances are safe to run concurrently in the same program —
+// bubblessh.Model instances are safe to run concurrently in the same program —
 // each one tags its internal messages with its own id, so a parent can
 // broadcast any non-key message to every child without routing it by hand.
 //
@@ -15,11 +15,11 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	lipgloss "charm.land/lipgloss/v2"
-	"github.com/muhamm-ad/bubble-ssh"
+	bubblessh "github.com/muhamm-ad/bubble-ssh"
 )
 
 type appModel struct {
-	left, right   bubble_ssh.Model
+	left, right   bubblessh.Model
 	leftAddr      string
 	rightAddr     string
 	focus         int // 0 = left, 1 = right
@@ -48,10 +48,10 @@ func (a appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		var m tea.Model
 		if a.focus == 0 {
 			m, cmd = a.left.Update(msg)
-			a.left = m.(bubble_ssh.Model)
+			a.left = m.(bubblessh.Model)
 		} else {
 			m, cmd = a.right.Update(msg)
-			a.right = m.(bubble_ssh.Model)
+			a.right = m.(bubblessh.Model)
 		}
 		return a, cmd
 
@@ -72,14 +72,14 @@ func (a appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return a, tea.Batch(lcmd, rcmd)
 	}
 
-	// Everything else — bubble_ssh's own connectedMsg/outputMsg/closedMsg/errMsg
+	// Everything else — bubblessh's own connectedMsg/outputMsg/closedMsg/errMsg
 	// mainly — gets broadcast to both panes. Each Model silently ignores
 	// messages that aren't addressed to it, so this is safe even though
 	// only one pane will actually match any given message.
 	lm, lcmd := a.left.Update(msg)
-	a.left = lm.(bubble_ssh.Model)
+	a.left = lm.(bubblessh.Model)
 	rm, rcmd := a.right.Update(msg)
-	a.right = rm.(bubble_ssh.Model)
+	a.right = rm.(bubblessh.Model)
 	return a, tea.Batch(lcmd, rcmd)
 }
 
@@ -126,23 +126,23 @@ func main() {
 	leftUser, leftAddr := splitUserHost(*left)
 	rightUser, rightAddr := splitUserHost(*right)
 
-	leftOpts := []bubble_ssh.Option{bubble_ssh.WithUser(leftUser), bubble_ssh.WithAgent()}
-	rightOpts := []bubble_ssh.Option{bubble_ssh.WithUser(rightUser), bubble_ssh.WithAgent()}
+	leftOpts := []bubblessh.Option{bubblessh.WithUser(leftUser), bubblessh.WithAgent()}
+	rightOpts := []bubblessh.Option{bubblessh.WithUser(rightUser), bubblessh.WithAgent()}
 	if *insecure {
-		leftOpts = append(leftOpts, bubble_ssh.WithInsecureIgnoreHostKey())
-		rightOpts = append(rightOpts, bubble_ssh.WithInsecureIgnoreHostKey())
+		leftOpts = append(leftOpts, bubblessh.WithInsecureIgnoreHostKey())
+		rightOpts = append(rightOpts, bubblessh.WithInsecureIgnoreHostKey())
 	}
 
 	m := appModel{
-		left:      bubble_ssh.New(leftAddr, leftOpts...),
-		right:     bubble_ssh.New(rightAddr, rightOpts...),
+		left:      bubblessh.New(leftAddr, leftOpts...),
+		right:     bubblessh.New(rightAddr, rightOpts...),
 		leftAddr:  *left,
 		rightAddr: *right,
 	}
 
 	p := tea.NewProgram(m)
 	if _, err := p.Run(); err != nil {
-		fmt.Fprintln(os.Stderr, "bubble_ssh:", err)
+		fmt.Fprintln(os.Stderr, "bubblessh:", err)
 		os.Exit(1)
 	}
 }

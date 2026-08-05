@@ -1,4 +1,4 @@
-// Package bubble_ssh embeds a real, interactive SSH session inside a Bubble Tea
+// Package bubblessh embeds a real, interactive SSH session inside a Bubble Tea
 // (charm.land/bubbletea/v2) model.
 //
 // It opens an SSH connection with golang.org/x/crypto/ssh, requests a PTY,
@@ -29,10 +29,10 @@
 //
 // # Basic usage
 //
-//	m := bubble_ssh.New("example.com:22",
-//		bubble_ssh.WithUser("alice"),
-//		bubble_ssh.WithAgent(),
-//		bubble_ssh.WithSize(80, 24),
+//	m := bubblessh.New("example.com:22",
+//		bubblessh.WithUser("alice"),
+//		bubblessh.WithAgent(),
+//		bubblessh.WithSize(80, 24),
 //	)
 //	p := tea.NewProgram(m)
 //	if _, err := p.Run(); err != nil {
@@ -41,4 +41,4 @@
 //
 // See the examples/ directory for a standalone full-screen client and for
 // embedding the pane as one half of a split-screen layout.
-package bubble_ssh
+package bubblessh
