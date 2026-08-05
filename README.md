@@ -36,7 +36,7 @@ See [doc.go](./doc.go) for an architecture diagram of how data flows between the
 
 ## Usage patterns
 
-Examples live in their own Go module (`examples/go.mod`) so demo-only dependencies like `bubbles`/`lipgloss` never end up in this library's own `go.mod` — run them from inside `examples/`, not the repo root:
+Examples live in their own Go module (`examples/go.mod`) so demo-only dependencies like `lipgloss` never end up in this library's own `go.mod` — run them from inside `examples/`, not the repo root:
 
 ```bash
 cd examples
@@ -51,6 +51,10 @@ See [`examples/basic`](./examples/basic) — wraps `bubblessh.Model` in a tiny r
 ### Embedded as one pane among several
 
 See [`examples/split-pane`](./examples/split-pane) — two independent SSH sessions rendered side by side with [lipgloss](https://charm.land/lipgloss/v2), Tab to switch which one receives keystrokes. Every `bubblessh.Model` tags its internal async messages with its own instance id, so it's safe to `Update()` several instances with the same incoming message — each one ignores messages that aren't its own. Use `Content()` (a plain ANSI string) rather than `View()` (a `tea.View`) when composing a pane into a bigger layout.
+
+### A fuller reference app
+
+[`examples/lazyssh`](https://github.com/muhamm-ad/lazyssh) is a separate project built on this library — a connection form driving the terminal pane. Linked here as a git submodule; see [`.gitmodules`](./.gitmodules) for how to populate it after cloning and how to bump it to lazyssh's latest commit.
 
 ## Options
 

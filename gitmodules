@@ -1,0 +1,25 @@
+# examples/lazyssh is a separate, independent project (its own go.mod,
+# README, CI) — linked here as a git submodule rather than copied in,
+# so it stays in sync with its own repo instead of drifting.
+#
+# POPULATING IT — a plain `git clone` of bubble-ssh leaves examples/lazyssh
+# EMPTY. Either clone with submodules from the start:
+#
+#	git clone --recurse-submodules https://github.com/muhamm-ad/bubble-ssh.git
+#
+# or, after a plain clone you already have:
+#
+#	git submodule update --init --recursive
+#
+# UPDATING IT — this file pins an exact commit, not "whatever lazyssh's
+# main branch currently is". It never moves on its own, not even on
+# `git pull` of bubble-ssh itself. To point it at lazyssh's latest commit:
+#
+#	git submodule update --remote examples/lazyssh
+#	git add examples/lazyssh
+#	git commit -m "bump lazyssh submodule"
+#	git push
+[submodule "examples/lazyssh"]
+	path = examples/lazyssh
+	url = https://github.com/muhamm-ad/lazyssh.git
+	branch = main
