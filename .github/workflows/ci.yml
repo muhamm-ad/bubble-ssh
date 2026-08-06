@@ -14,33 +14,30 @@ concurrency:
 
 jobs:
   test:
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: 10
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Go
-        uses: actions/setup-go@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
           cache: true
 
       # Two separate Go modules live in this repo: the library at the root,
-      # and examples/ on its own — see examples/go.mod for why (keeps
+      # and examples/ on its own; see examples/go.mod for why (keeps
       # demo-only deps like bubbles/lipgloss out of the library's go.mod).
       # Everything below runs for each module in turn.
 
-      - name: Verify root go.mod / go.sum are tidy
+      - name: Verify root go.mod and go.sum are tidy
         run: |
           go mod tidy
           git diff --exit-code go.mod go.sum
 
-      - name: Verify examples/go.mod / go.sum are tidy
+      - name: Verify examples/go.mod and examples/go.sum are tidy
         working-directory: examples
         run: |
           go mod tidy

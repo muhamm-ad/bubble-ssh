@@ -3,14 +3,18 @@ name: Release
 on:
   release:
     types: [created]
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+"
+      - "**/v[0-9]+.[0-9]+.[0-9]+"
 
 permissions:
   contents: read
 
 jobs:
   pull:
+    name: Renew documentation
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - name: Pull new module version into the Go proxy cache
-        uses: andrewslotin/go-proxy-pull-action@v1.1.0
+        uses: andrewslotin/go-proxy-pull-action@master

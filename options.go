@@ -72,7 +72,7 @@ func parsePEM(pemBytes []byte, passphrase string) (ssh.Signer, error) {
 // time, so it's safe to call even if no agent is running yet (it'll just
 // fail at Connect time with a clear error).
 //
-// TODO(windows): this only reaches agents exposed as a Unix domain socket
+// Windows: this only reaches agents exposed as a Unix domain socket
 // (macOS, Linux, Git Bash/MSYS2, WSL). The native Windows OpenSSH agent
 // service uses a named pipe instead, which net.Dial("unix", ...) can't
 // reach — see docs/ssh-agent-windows.md for the full explanation and
