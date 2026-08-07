@@ -1,0 +1,46 @@
+# Dependabot sometimes fails to run `go mod tidy` correctly on its own —
+# acknowledged by GitHub itself: https://github.com/orgs/community/discussions/54411
+# ("we do not fail the Dependabot update job when this happens"). Multi-
+# module repos like this one (root go.mod + examples/go.mod) are exactly
+# the case where it tends to go wrong. This workflow re-runs the real
+# `go mod tidy` on the PR's own branch and pushes a fixup commit if the
+# result differs — that push re-triggers CI automatically, so the tidy
+# check in ci.yml gets a fair, up-to-date result before anything merges.
+name: Dependabot go mod tidy
+
+on: pull_request
+
+permissions:
+  contents: write
+
+jobs:
+  tidy:
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.user.login == 'dependabot[bot]' && github.repository == 'muhamm-ad/bubble-ssh'
+    steps:
+      - name: Checkout the PR's branch
+        uses: actions/checkout@v4
+        with:
+          # Default checkout on a pull_request event lands on a detached,
+          # synthetic merge commit — pushing from there wouldn't reach the
+          # actual PR branch. head_ref is the real branch name.
+          ref: ${{ github.head_ref }}
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Tidy root module
+        run: go mod tidy
+
+      - name: Tidy examples module
+        working-directory: examples
+        run: go mod tidy
+
+      - name: Commit and push if go.mod/go.sum changed
+        uses: stefanzweifel/git-auto-commit-action@v7
+        with:
+          commit_message: "chore: go mod tidy"
+          file_pattern: "go.mod go.sum examples/go.mod examples/go.sum"

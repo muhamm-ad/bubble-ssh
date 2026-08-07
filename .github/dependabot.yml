@@ -9,6 +9,15 @@ updates:
       - "dependencies"
       - "lazyssh"
 
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "gh-actions"
+
   - package-ecosystem: "gomod"
     directory: "/"
     schedule:
@@ -16,7 +25,6 @@ updates:
     labels:
       - "maintenance"
       - "dependencies"
-      - "go"
 
   - package-ecosystem: "gomod"
     directory: "/examples"
@@ -25,5 +33,4 @@ updates:
     labels:
       - "maintenance"
       - "dependencies"
-      - "go"
       - "examples"
