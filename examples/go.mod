@@ -9,7 +9,7 @@ replace github.com/muhamm-ad/bubble-ssh => ../
 
 require (
 	charm.land/bubbletea/v2 v2.0.8
-	charm.land/lipgloss/v2 v2.0.0
+	charm.land/lipgloss/v2 v2.0.5
 	github.com/muhamm-ad/bubble-ssh v0.1.0
 	golang.org/x/term v0.27.0
 )
