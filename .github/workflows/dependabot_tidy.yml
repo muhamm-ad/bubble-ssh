@@ -19,7 +19,7 @@ jobs:
     if: github.event.pull_request.user.login == 'dependabot[bot]' && github.repository == 'muhamm-ad/bubble-ssh'
     steps:
       - name: Checkout the PR's branch
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           # Default checkout on a pull_request event lands on a detached,
           # synthetic merge commit — pushing from there wouldn't reach the
