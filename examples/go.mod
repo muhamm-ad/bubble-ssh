@@ -9,9 +9,9 @@ replace github.com/muhamm-ad/bubble-ssh => ../
 
 require (
 	charm.land/bubbletea/v2 v2.0.8
-	charm.land/lipgloss/v2 v2.0.0
+	charm.land/lipgloss/v2 v2.0.5
 	github.com/muhamm-ad/bubble-ssh v0.1.0
-	golang.org/x/term v0.27.0
+	golang.org/x/term v0.45.0
 )
 
 require (
@@ -32,5 +32,5 @@ require (
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
 	golang.org/x/crypto v0.31.0 // indirect
 	golang.org/x/sync v0.21.0 // indirect
-	golang.org/x/sys v0.46.0 // indirect
+	golang.org/x/sys v0.47.0 // indirect
 )
