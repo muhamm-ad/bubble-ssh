@@ -248,3 +248,22 @@ func WithMouseForwarding() Option {
 func WithConnectTimeout(d time.Duration) Option {
 	return func(m *Model) { m.connectTimeout = d }
 }
+
+type CursorShape int
+
+const (
+	CursorBlock CursorShape = iota
+	CursorUnderline
+	CursorBar
+)
+
+// WithCursorShape sets how the connected terminal's cursor is drawn.
+// Default is CursorBar.
+//
+// This is a fixed choice — the cursor always renders in this shape,
+// regardless of what the remote program is doing. It does not track
+// cursor-shape requests from the remote side.
+// bubblessh always shows the one shape you pick here.
+func WithCursorShape(shape CursorShape) Option {
+	return func(m *Model) { m.cursorShape = shape }
+}

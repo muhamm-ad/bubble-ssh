@@ -54,8 +54,10 @@ type Model struct {
 	stdin   io.WriteCloser
 	vt      *vt.Emulator
 
-	outCh  chan tea.Msg
-	cancel context.CancelFunc
+	cursorShape   CursorShape
+	cursorVisible *bool // cursorVisible mirrors the vt.Callbacks.CursorVisibility state set up in connect() — see connectedMsg for why it's a pointer.
+	outCh         chan tea.Msg
+	cancel        context.CancelFunc
 }
 
 // New creates a Model for the given address ("host" or "host:port"). Call
@@ -71,6 +73,7 @@ func New(addr string, opts ...Option) Model {
 		width:          80,
 		height:         24,
 		connectTimeout: 10 * time.Second,
+		cursorShape:    CursorBar,
 		state:          stateConnecting,
 	}
 	for _, opt := range opts {
@@ -107,6 +110,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.session = msg.session
 		m.stdin = msg.stdin
 		m.vt = msg.term
+		m.cursorVisible = msg.cursorVisible
 		m.outCh = msg.outCh
 		m.cancel = msg.cancel
 		return m, waitForActivity(m.id, m.outCh)
@@ -152,9 +156,34 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+// teaShape converts our own CursorShape (the type WithCursorShape takes) to
+// tea.CursorShape (what View() actually needs to hand Bubble Tea). Kept as
+// our own type rather than exposing tea.CursorShape directly in the public
+// API, same reasoning as every other Option — WithSize takes plain ints,
+// not a tea type either.
+func (s CursorShape) teaShape() tea.CursorShape {
+	switch s {
+	case CursorUnderline:
+		return tea.CursorUnderline
+	case CursorBar:
+		return tea.CursorBar
+	default:
+		return tea.CursorBlock
+	}
+}
+
 // View satisfies tea.Model.
 func (m Model) View() tea.View {
-	return tea.NewView(m.Content())
+	view := tea.NewView(m.Content())
+	if m.state == stateConnected && m.vt != nil && (m.cursorVisible == nil || *m.cursorVisible) {
+		pos := m.vt.CursorPosition()
+		view.Cursor = &tea.Cursor{
+			Position: tea.Position{X: pos.X, Y: pos.Y},
+			Shape:    m.cursorShape.teaShape(),
+			Blink:    true,
+		}
+	}
+	return view
 }
 
 // Content returns the current screen content as a plain styled string

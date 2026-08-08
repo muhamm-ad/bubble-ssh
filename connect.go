@@ -79,6 +79,13 @@ func (m Model) connect() tea.Msg {
 	}
 
 	term := vt.NewEmulator(m.width, m.height)
+
+	// Tracks DECTCEM (cursor show/hide, `\x1b[?25l`/`\x1b[?25h`) so View() can honor it
+	cursorVisible := true
+	term.SetCallbacks(vt.Callbacks{
+		CursorVisibility: func(visible bool) { cursorVisible = visible },
+	})
+
 	outCh := make(chan tea.Msg, 64)
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -90,13 +97,14 @@ func (m Model) connect() tea.Msg {
 	}()
 
 	return connectedMsg{
-		id:      m.id,
-		client:  client,
-		session: session,
-		stdin:   stdin,
-		term:    term,
-		outCh:   outCh,
-		cancel:  cancel,
+		id:            m.id,
+		client:        client,
+		session:       session,
+		stdin:         stdin,
+		term:          term,
+		cursorVisible: &cursorVisible,
+		outCh:         outCh,
+		cancel:        cancel,
 	}
 }
 

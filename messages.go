@@ -30,15 +30,14 @@ const (
 // connectedMsg is delivered once the SSH connection, PTY, and shell are all up.
 // It carries the live handles that Update() will store on the Model.
 type connectedMsg struct {
-	id uint64
-
-	client  *ssh.Client
-	session *ssh.Session
-	stdin   io.WriteCloser
-	term    *vt.Emulator
-
-	outCh  chan tea.Msg
-	cancel context.CancelFunc
+	id            uint64
+	client        *ssh.Client
+	session       *ssh.Session
+	stdin         io.WriteCloser
+	term          *vt.Emulator
+	cursorVisible *bool
+	outCh         chan tea.Msg
+	cancel        context.CancelFunc
 }
 
 // outputMsg is a chunk of raw bytes read from the remote shell's stdout.
