@@ -5,6 +5,21 @@ import (
 	uv "github.com/charmbracelet/ultraviolet"
 )
 
+// scrollFromWheel turns a wheel event into local scrolling. Only reached
+// when mouse forwarding is off, so this is the "plain shell prompt"
+// default rather than something that fights a remote program's own mouse
+// handling — with WithMouseForwarding on, the wheel goes to the remote
+// instead, see sendMouse.
+func (m Model) scrollFromWheel(msg tea.MouseWheelMsg) Model {
+	switch msg.Mouse().Button {
+	case tea.MouseWheelUp:
+		return m.ScrollUp(3)
+	case tea.MouseWheelDown:
+		return m.ScrollDown(3)
+	}
+	return m
+}
+
 // sendMouse forwards a mouse event to the remote program (e.g. vim/tmux
 // with mouse mode enabled). Only active when the Model was built with
 // WithMouseForwarding — most plain shell usage doesn't need this, and your

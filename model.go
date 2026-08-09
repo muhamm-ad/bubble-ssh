@@ -43,6 +43,8 @@ type Model struct {
 	width, height   int
 	mouseForwarding bool
 	connectTimeout  time.Duration
+	cursorShape     CursorShape
+	scrollOffset    int
 	setupErr        error // first error raised by an Option, surfaced at Init()
 
 	// --- runtime state ---
@@ -53,11 +55,12 @@ type Model struct {
 	session *ssh.Session
 	stdin   io.WriteCloser
 	vt      *vt.Emulator
+	// cursorVisible mirrors the vt.Callbacks.CursorVisibility state set up
+	// in connect() — see connectedMsg for why it's a pointer.
+	cursorVisible *bool
 
-	cursorShape   CursorShape
-	cursorVisible *bool // cursorVisible mirrors the vt.Callbacks.CursorVisibility state set up in connect() — see connectedMsg for why it's a pointer.
-	outCh         chan tea.Msg
-	cancel        context.CancelFunc
+	outCh  chan tea.Msg
+	cancel context.CancelFunc
 }
 
 // New creates a Model for the given address ("host" or "host:port"). Call
@@ -142,13 +145,28 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case tea.KeyPressMsg:
 		if m.state == stateConnected {
+			m.scrollOffset = 0
 			m.sendKey(msg)
 		}
 		return m, nil
 
+	case tea.PasteMsg:
+		if m.state == stateConnected && m.vt != nil {
+			m.scrollOffset = 0
+			m.vt.Paste(msg.Content)
+		}
+		return m, nil
+
 	case tea.MouseMsg:
-		if m.mouseForwarding && m.state == stateConnected {
+		if m.state != stateConnected {
+			return m, nil
+		}
+		if m.mouseForwarding {
 			m.sendMouse(msg)
+			return m, nil
+		}
+		if wheel, ok := msg.(tea.MouseWheelMsg); ok {
+			m = m.scrollFromWheel(wheel)
 		}
 		return m, nil
 	}
@@ -175,15 +193,35 @@ func (s CursorShape) teaShape() tea.CursorShape {
 // View satisfies tea.Model.
 func (m Model) View() tea.View {
 	view := tea.NewView(m.Content())
-	if m.state == stateConnected && m.vt != nil && (m.cursorVisible == nil || *m.cursorVisible) {
-		pos := m.vt.CursorPosition()
-		view.Cursor = &tea.Cursor{
-			Position: tea.Position{X: pos.X, Y: pos.Y},
-			Shape:    m.cursorShape.teaShape(),
-			Blink:    true,
-		}
-	}
+	view.Cursor = m.Cursor()
 	return view
+}
+
+// Cursor returns the cursor to draw for the current state, in
+// content-local coordinates (0,0 is the top-left of Content()) — or nil if
+// no cursor should be shown right now (not connected, or the remote hid
+// it). View() uses this directly; if you're composing Content() into a
+// bigger layout instead, use this too and offset the position by wherever
+// you place that content on screen.
+func (m Model) Cursor() *tea.Cursor {
+	if m.state != stateConnected || m.vt == nil {
+		return nil
+	}
+	if m.scrollOffset > 0 {
+		// Scrolled into history — the live cursor position has nothing to
+		// do with what's currently shown, same as a normal terminal hides
+		// its cursor while you're scrolled back.
+		return nil
+	}
+	if m.cursorVisible != nil && !*m.cursorVisible {
+		return nil
+	}
+	pos := m.vt.CursorPosition()
+	return &tea.Cursor{
+		Position: tea.Position{X: pos.X, Y: pos.Y},
+		Shape:    m.cursorShape.teaShape(),
+		Blink:    true,
+	}
 }
 
 // Content returns the current screen content as a plain styled string
@@ -204,6 +242,9 @@ func (m Model) Content() string {
 	default:
 		if m.vt == nil {
 			return ""
+		}
+		if m.scrollOffset > 0 {
+			return m.renderScrolled()
 		}
 		return m.vt.Render()
 	}
