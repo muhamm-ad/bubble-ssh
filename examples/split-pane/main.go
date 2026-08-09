@@ -1,33 +1,84 @@
 // Command split-pane connects to two hosts at once and shows them side by
-// side, Tab to switch which pane receives keystrokes. It demonstrates that
-// bubblessh.Model instances are safe to run concurrently in the same program —
-// each one tags its internal messages with its own id, so a parent can
-// broadcast any non-key message to every child without routing it by hand.
+// side. Each pane asks for its password inline before connecting.
 //
-//	go run ./split-pane -left alice@host1:22 -right bob@host2:22
+//	go run ./split-pane -left bandit0@bandit.labs.overthewire.org:2220 -right bandit1@bandit.labs.overthewire.org:2220
 package main
 
 import (
 	"flag"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 
 	tea "charm.land/bubbletea/v2"
 	lipgloss "charm.land/lipgloss/v2"
-	"github.com/muhamm-ad/bubble-ssh"
+	bubblessh "github.com/muhamm-ad/bubble-ssh"
 )
 
+type pane struct {
+	addr, user string
+	port       int
+	started    bool
+	password   string
+	ssh        bubblessh.Model
+}
+
+func (p *pane) start(cols, rows int) tea.Cmd {
+	p.ssh = bubblessh.New(p.addr,
+		bubblessh.WithPort(p.port),
+		bubblessh.WithUser(p.user),
+		bubblessh.WithPassword(p.password),
+		bubblessh.WithSize(cols, rows),
+	)
+	p.started = true
+	return p.ssh.Init()
+}
+
+func (p *pane) updateAwaitingPassword(msg tea.KeyPressMsg, cols, rows int) tea.Cmd {
+	switch msg.String() {
+	case "enter":
+		return p.start(cols, rows)
+	case "backspace":
+		if len(p.password) > 0 {
+			p.password = p.password[:len(p.password)-1]
+		}
+	default:
+		if len(msg.Text) > 0 {
+			p.password += msg.Text
+		}
+	}
+	return nil
+}
+
+func (p *pane) content() string {
+	if p.started {
+		return p.ssh.Content()
+	}
+	masked := strings.Repeat("*", len(p.password))
+	return fmt.Sprintf("%s@%s\n\npassword: %s\n\n(enter to connect)", p.user, p.addr, masked)
+}
+
 type appModel struct {
-	left, right   bubblessh.Model
-	leftAddr      string
-	rightAddr     string
-	focus         int // 0 = left, 1 = right
+	left, right   pane
+	focus         int
 	width, height int
 }
 
 func (a appModel) Init() tea.Cmd {
-	return tea.Batch(a.left.Init(), a.right.Init())
+	return nil
+}
+
+func (a appModel) paneSize() (cols, rows int) {
+	outerW := a.width / 2
+	cols, rows = outerW-2, a.height-2
+	if cols < 1 {
+		cols = 1
+	}
+	if rows < 1 {
+		rows = 1
+	}
+	return cols, rows
 }
 
 func (a appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -35,77 +86,139 @@ func (a appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case tea.KeyPressMsg:
 		switch msg.String() {
-		case "ctrl+c":
-			_ = a.left.Close()
-			_ = a.right.Close()
+		case "ctrl+q":
+			if a.left.started {
+				_ = a.left.ssh.Close()
+			}
+			if a.right.started {
+				_ = a.right.ssh.Close()
+			}
 			return a, tea.Quit
-		case "tab":
-			a.focus = 1 - a.focus
+		case "ctrl+left":
+			a.focus = 0
+			return a, nil
+		case "ctrl+right":
+			a.focus = 1
 			return a, nil
 		}
-		// Any other key goes only to the focused pane.
-		var cmd tea.Cmd
-		var m tea.Model
+
+		cols, rows := a.paneSize()
 		if a.focus == 0 {
-			m, cmd = a.left.Update(msg)
-			a.left = m.(bubblessh.Model)
+			if !a.left.started {
+				return a, a.left.updateAwaitingPassword(msg, cols, rows)
+			}
+			m, cmd := a.left.ssh.Update(msg)
+			a.left.ssh = m.(bubblessh.Model)
+			return a, cmd
 		} else {
-			m, cmd = a.right.Update(msg)
-			a.right = m.(bubblessh.Model)
+			if !a.right.started {
+				return a, a.right.updateAwaitingPassword(msg, cols, rows)
+			}
+			m, cmd := a.right.ssh.Update(msg)
+			a.right.ssh = m.(bubblessh.Model)
+			return a, cmd
+		}
+
+	case tea.PasteMsg:
+		if a.focus == 0 {
+			if !a.left.started {
+				a.left.password += msg.Content
+				return a, nil
+			}
+			m, cmd := a.left.ssh.Update(msg)
+			a.left.ssh = m.(bubblessh.Model)
+			return a, cmd
+		} else {
+			if !a.right.started {
+				a.right.password += msg.Content
+				return a, nil
+			}
+			m, cmd := a.right.ssh.Update(msg)
+			a.right.ssh = m.(bubblessh.Model)
+			return a, cmd
+		}
+
+	case tea.MouseMsg:
+		var cmd tea.Cmd
+
+		switch a.focus {
+		case 0:
+			if !a.left.started {
+				return a, nil
+			}
+			m, c := a.left.ssh.Update(msg)
+			a.left.ssh = m.(bubblessh.Model)
+			cmd = c
+		case 1:
+			if !a.right.started {
+				return a, nil
+			}
+			m, c := a.right.ssh.Update(msg)
+			a.right.ssh = m.(bubblessh.Model)
+			cmd = c
 		}
 		return a, cmd
 
 	case tea.WindowSizeMsg:
 		a.width, a.height = msg.Width, msg.Height
-		outerW := a.width / 2
-		outerH := a.height - 1                   // reserve one line for the status bar
-		contentW, contentH := outerW-2, outerH-2 // -2 each: the pane border
-		if contentW < 1 {
-			contentW = 1
-		}
-		if contentH < 1 {
-			contentH = 1
-		}
+		cols, rows := a.paneSize()
 		var lcmd, rcmd tea.Cmd
-		a.left, lcmd = a.left.SetSize(contentW, contentH)
-		a.right, rcmd = a.right.SetSize(contentW, contentH)
+		if a.left.started {
+			a.left.ssh, lcmd = a.left.ssh.SetSize(cols, rows)
+		}
+		if a.right.started {
+			a.right.ssh, rcmd = a.right.ssh.SetSize(cols, rows)
+		}
 		return a, tea.Batch(lcmd, rcmd)
 	}
 
-	// Everything else — bubblessh's own connectedMsg/outputMsg/closedMsg/errMsg
-	// mainly — gets broadcast to both panes. Each Model silently ignores
-	// messages that aren't addressed to it, so this is safe even though
-	// only one pane will actually match any given message.
-	lm, lcmd := a.left.Update(msg)
-	a.left = lm.(bubblessh.Model)
-	rm, rcmd := a.right.Update(msg)
-	a.right = rm.(bubblessh.Model)
+	var lcmd, rcmd tea.Cmd
+	if a.left.started {
+		lm, cmd := a.left.ssh.Update(msg)
+		a.left.ssh = lm.(bubblessh.Model)
+		lcmd = cmd
+	}
+	if a.right.started {
+		rm, cmd := a.right.ssh.Update(msg)
+		a.right.ssh = rm.(bubblessh.Model)
+		rcmd = cmd
+	}
 	return a, tea.Batch(lcmd, rcmd)
 }
 
 func (a appModel) View() tea.View {
-	outerW := a.width / 2
-	outerH := a.height - 1
-	contentW, contentH := outerW-2, outerH-2
-	if contentW < 1 {
-		contentW = 1
+	cols, rows := a.paneSize()
+
+	left := paneStyle(a.focus == 0, cols, rows).Render(a.left.content())
+	right := paneStyle(a.focus == 1, cols, rows).Render(a.right.content())
+	panels := lipgloss.JoinHorizontal(lipgloss.Top, left, right)
+
+	status := lipgloss.NewStyle().Faint(true).Render("ctrl+<-: focus left  •  ctrl+->: focus right  •  enter: connect  •  ctrl+q: quit")
+
+	result := lipgloss.JoinVertical(lipgloss.Left, panels, status)
+	view := tea.NewView(result)
+	view.AltScreen = true
+	view.MouseMode = tea.MouseModeCellMotion
+
+	focused := &a.left
+	xOffset := 1
+	if a.focus == 1 {
+		focused = &a.right
+		xOffset = a.width / 2
 	}
-	if contentH < 1 {
-		contentH = 1
+	if focused.started {
+		if cur := focused.ssh.Cursor(); cur != nil {
+			cur.X += xOffset
+			cur.Y++
+			view.Cursor = cur
+		}
 	}
 
-	left := paneStyle(a.focus == 0, contentW, contentH).Render(a.left.Content())
-	right := paneStyle(a.focus == 1, contentW, contentH).Render(a.right.Content())
-	row := lipgloss.JoinHorizontal(lipgloss.Top, left, right)
-
-	status := fmt.Sprintf("[%s | %s]  tab: switch pane  •  ctrl+c: quit", a.leftAddr, a.rightAddr)
-	status = lipgloss.NewStyle().Faint(true).Render(status)
-
-	return tea.NewView(strings.Join([]string{row, status}, "\n"))
+	return view
 }
 
-func paneStyle(focused bool, w, h int) lipgloss.Style {
-	s := lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).Width(w).Height(h)
+func paneStyle(focused bool, width, height int) lipgloss.Style {
+	s := lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).Width(width).Height(height)
 	if focused {
 		return s.BorderForeground(lipgloss.Color("212"))
 	}
@@ -115,7 +228,6 @@ func paneStyle(focused bool, w, h int) lipgloss.Style {
 func main() {
 	left := flag.String("left", "", "left pane, as user@host:port")
 	right := flag.String("right", "", "right pane, as user@host:port")
-	insecure := flag.Bool("insecure-ignore-host-key", false, "skip host key verification (testing only!)")
 	flag.Parse()
 
 	if *left == "" || *right == "" {
@@ -123,21 +235,14 @@ func main() {
 		os.Exit(2)
 	}
 
-	leftUser, leftAddr := splitUserHost(*left)
-	rightUser, rightAddr := splitUserHost(*right)
-
-	leftOpts := []bubblessh.Option{bubblessh.WithUser(leftUser), bubblessh.WithAgent()}
-	rightOpts := []bubblessh.Option{bubblessh.WithUser(rightUser), bubblessh.WithAgent()}
-	if *insecure {
-		leftOpts = append(leftOpts, bubblessh.WithInsecureIgnoreHostKey())
-		rightOpts = append(rightOpts, bubblessh.WithInsecureIgnoreHostKey())
-	}
+	leftUser, leftAddr, leftPort := splitUserHost(*left)
+	rightUser, rightAddr, rightPort := splitUserHost(*right)
 
 	m := appModel{
-		left:      bubblessh.New(leftAddr, leftOpts...),
-		right:     bubblessh.New(rightAddr, rightOpts...),
-		leftAddr:  *left,
-		rightAddr: *right,
+		left:   pane{addr: leftAddr, user: leftUser, port: leftPort},
+		right:  pane{addr: rightAddr, user: rightUser, port: rightPort},
+		width:  80,
+		height: 24,
 	}
 
 	p := tea.NewProgram(m)
@@ -147,10 +252,15 @@ func main() {
 	}
 }
 
-// splitUserHost splits "user@host:port" into ("user", "host:port").
-func splitUserHost(s string) (user, addr string) {
+func splitUserHost(s string) (user, addr string, port int) {
 	if i := strings.Index(s, "@"); i >= 0 {
-		return s[:i], s[i+1:]
+		user = s[:i]
+		addr = s[i+1:]
+		if j := strings.Index(addr, ":"); j >= 0 {
+			port, _ = strconv.Atoi(addr[j+1:])
+			addr = addr[:j]
+		}
+		return user, addr, port
 	}
-	return os.Getenv("USER"), s
+	return os.Getenv("USER"), "", 22
 }
