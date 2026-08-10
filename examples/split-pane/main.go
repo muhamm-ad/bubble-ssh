@@ -51,12 +51,38 @@ func (p *pane) updateAwaitingPassword(msg tea.KeyPressMsg, cols, rows int) tea.C
 	return nil
 }
 
-func (p *pane) content() string {
+func (p *pane) content(cols, rows int) string {
+	var raw string
 	if p.started {
-		return p.ssh.Content()
+		raw = p.ssh.Content()
+	} else {
+		masked := strings.Repeat("*", len(p.password))
+		raw = fmt.Sprintf("%s@%s\n\npassword: %s\n\n(enter to connect)", p.user, p.addr, masked)
 	}
-	masked := strings.Repeat("*", len(p.password))
-	return fmt.Sprintf("%s@%s\n\npassword: %s\n\n(enter to connect)", p.user, p.addr, masked)
+	return fitPane(raw, cols, rows)
+}
+
+func fitPane(s string, cols, rows int) string {
+	if rows < 1 {
+		return ""
+	}
+	lines := strings.Split(s, "\n")
+	if len(lines) > rows {
+		lines = lines[len(lines)-rows:]
+	} else {
+		for len(lines) < rows {
+			lines = append(lines, "")
+		}
+	}
+	out := make([]string, len(lines))
+	for i, line := range lines {
+		if cols > 0 && lipgloss.Width(line) > cols {
+			out[i] = lipgloss.NewStyle().MaxWidth(cols).Render(line)
+		} else {
+			out[i] = line
+		}
+	}
+	return strings.Join(out, "\n")
 }
 
 type appModel struct {
@@ -69,15 +95,20 @@ func (a appModel) Init() tea.Cmd {
 	return nil
 }
 
+func (a appModel) paneLayout() (cols, rows, boxW, boxH int) {
+	const (
+		statusH = 1
+		border  = 2
+	)
+	boxW = max(1, a.width/2)
+	boxH = max(1, a.height-statusH)
+	cols = max(1, boxW-border)
+	rows = max(1, boxH-border)
+	return cols, rows, boxW, boxH
+}
+
 func (a appModel) paneSize() (cols, rows int) {
-	outerW := a.width / 2
-	cols, rows = outerW-2, a.height-2
-	if cols < 1 {
-		cols = 1
-	}
-	if rows < 1 {
-		rows = 1
-	}
+	cols, rows, _, _ = a.paneLayout()
 	return cols, rows
 }
 
@@ -187,10 +218,10 @@ func (a appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (a appModel) View() tea.View {
-	cols, rows := a.paneSize()
+	cols, rows, boxW, boxH := a.paneLayout()
 
-	left := paneStyle(a.focus == 0, cols, rows).Render(a.left.content())
-	right := paneStyle(a.focus == 1, cols, rows).Render(a.right.content())
+	left := paneStyle(a.focus == 0, boxW, boxH).Render(a.left.content(cols, rows))
+	right := paneStyle(a.focus == 1, boxW, boxH).Render(a.right.content(cols, rows))
 	panels := lipgloss.JoinHorizontal(lipgloss.Top, left, right)
 
 	status := lipgloss.NewStyle().Faint(true).Render("ctrl+<-: focus left  •  ctrl+->: focus right  •  enter: connect  •  ctrl+q: quit")
@@ -204,12 +235,12 @@ func (a appModel) View() tea.View {
 	xOffset := 1
 	if a.focus == 1 {
 		focused = &a.right
-		xOffset = a.width / 2
+		xOffset = a.width/2 + 1
 	}
 	if focused.started {
 		if cur := focused.ssh.Cursor(); cur != nil {
 			cur.X += xOffset
-			cur.Y++
+			cur.Y += 1
 			view.Cursor = cur
 		}
 	}
@@ -217,8 +248,8 @@ func (a appModel) View() tea.View {
 	return view
 }
 
-func paneStyle(focused bool, width, height int) lipgloss.Style {
-	s := lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).Width(width).Height(height)
+func paneStyle(focused bool, boxW, boxH int) lipgloss.Style {
+	s := lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).Width(boxW).Height(boxH)
 	if focused {
 		return s.BorderForeground(lipgloss.Color("212"))
 	}

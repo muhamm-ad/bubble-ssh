@@ -37,7 +37,7 @@ func (a appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyPressMsg:
 		// Ctrl+Q always quits the local program, before anything is
-		// forwarded to the remote shell. If you'd rather Ctrl+Q reach the
+		// forwarded to the remote shell. If you'd rather Ctrl+C reach the
 		// remote shell instead (like a real ssh client), drop this case —
 		// closing the remote session (e.g. typing "exit") still quits the
 		// program via the disconnect check below.

@@ -228,26 +228,35 @@ func (m Model) Cursor() *tea.Cursor {
 // (ANSI colors/links included, no cursor-positioning wrapper). Use this
 // instead of View() when embedding the pane inside a larger layout, e.g.
 // with lipgloss.JoinHorizontal.
+//
+// The result is always exactly height rows (and at most width cells per
+// row), matching the size last set via WithSize/SetSize. Overflow is
+// clipped from the top so the bottom — the most recent output — stays
+// visible; ScrollUp/ScrollDown already choose which window of history to
+// show, and this only clamps that window to the pane.
 func (m Model) Content() string {
+	var s string
 	switch m.state {
 	case stateConnecting:
-		return fmt.Sprintf("connecting to %s…", m.dialAddr())
+		s = fmt.Sprintf("connecting to %s…", m.dialAddr())
 	case stateError:
-		return fmt.Sprintf("ssh error: %v", m.err)
+		s = fmt.Sprintf("ssh error: %v", m.err)
 	case stateClosed:
 		if m.err != nil && m.err != io.EOF {
-			return fmt.Sprintf("connection closed: %v", m.err)
+			s = fmt.Sprintf("connection closed: %v", m.err)
+		} else {
+			s = "connection closed"
 		}
-		return "connection closed"
 	default:
 		if m.vt == nil {
-			return ""
+			s = ""
+		} else if m.scrollOffset > 0 {
+			s = m.renderScrolled()
+		} else {
+			s = m.vt.Render()
 		}
-		if m.scrollOffset > 0 {
-			return m.renderScrolled()
-		}
-		return m.vt.Render()
 	}
+	return fitBlock(s, m.width, m.height)
 }
 
 // Connected reports whether the SSH session is currently up.
