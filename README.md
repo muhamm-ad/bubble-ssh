@@ -46,7 +46,7 @@ go run ./split-pane
 
 ### As the whole program
 
-See [`examples/basic`](./examples/basic) — wraps `bubblessh.Model` in a tiny root model that handles quitting on Ctrl+C and forwards `tea.WindowSizeMsg` into `SetSize`. `bubblessh.Model` deliberately never calls `tea.Quit` itself or auto-tracks the window size, since it's also meant to be embedded — those are decisions for whatever owns the top-level program.
+See [`examples/basic`](./examples/basic) — wraps `bubblessh.Model` in a tiny root model that handles quitting on Ctrl+Q and forwards `tea.WindowSizeMsg` into `SetSize`. `bubblessh.Model` deliberately never calls `tea.Quit` itself or auto-tracks the window size, since it's also meant to be embedded — those are decisions for whatever owns the top-level program.
 
 ### Embedded as one pane among several
 

@@ -1,6 +1,11 @@
 package bubblessh
 
-import uv "github.com/charmbracelet/ultraviolet"
+import (
+	"strings"
+
+	uv "github.com/charmbracelet/ultraviolet"
+	"github.com/charmbracelet/x/ansi"
+)
 
 // ScrollUp scrolls the view up by the given number of lines, into the
 // scrollback history. Clamped at the oldest available line.
@@ -68,4 +73,30 @@ func (m Model) renderScrolled() string {
 		}
 	}
 	return buf.Render()
+}
+
+// fitBlock clamps s to exactly rows lines of at most cols cells each.
+// When s is taller than rows, the bottom-most lines are kept (most recent
+// terminal output). Shorter content is padded with blank lines at the
+// bottom so a parent layout can size a border around a fixed pane.
+func fitBlock(s string, cols, rows int) string {
+	if rows < 1 {
+		return ""
+	}
+	lines := strings.Split(s, "\n")
+	if len(lines) > rows {
+		lines = lines[len(lines)-rows:]
+	} else {
+		for len(lines) < rows {
+			lines = append(lines, "")
+		}
+	}
+	if cols > 0 {
+		for i, line := range lines {
+			if ansi.StringWidth(line) > cols {
+				lines[i] = ansi.Truncate(line, cols, "")
+			}
+		}
+	}
+	return strings.Join(lines, "\n")
 }

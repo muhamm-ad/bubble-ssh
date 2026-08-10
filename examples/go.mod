@@ -3,8 +3,7 @@ module examples
 go 1.25.0
 
 // Always build the examples against the in-repo version of the library,
-// not a published release — mirrors what https://github.com/charmbracelet/bubbletea itself
-// does for its own examples/go.mod.
+// not a published release — mirrors what https://github.com/charmbracelet/bubbletea itself does for its own examples/go.mod.
 replace github.com/muhamm-ad/bubble-ssh => ../
 
 require (
