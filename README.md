@@ -7,7 +7,7 @@ import "github.com/muhamm-ad/bubble-ssh"
 
 m := bubblessh.New("example.com:22",
     bubblessh.WithUser("alice"),
-    bubblessh.WithAgent(),        // or WithPassword(...) / WithPrivateKeyFile(...)
+    WithPassword(...) // or WithPrivateKeyFile(...)
     bubblessh.WithSize(80, 24),
     bubblessh.WithKnownHostsFile("~/.ssh/known_hosts"),
 )
@@ -24,7 +24,8 @@ go get github.com/muhamm-ad/bubble-ssh
 
 ## Why this needed writing (and what it's built on)
 
-As of August 2026, we didn't find a single off-the-shelf "SSH pane for Bubble Tea" package. `bubble-ssh` wires together three libraries that each do one part well:
+As of August 2026, we didn't find a single off-the-shelf "SSH pane for Bubble Tea" package.
+`bubble-ssh` wires together three libraries that each do one part well, and is a standalone package that can be used in any Bubble Tea application:
 
 | Library | Role |
 | --- | --- |
@@ -77,7 +78,7 @@ See [`examples/split-pane`](./examples/split-pane) — two independent SSH sessi
 
 You can combine multiple auth options — they're tried in the order given, same as the underlying `ssh` package.
 
-Several auth methods (password, key, agent) can be combined; the client tries each `ssh.AuthMethod` in order. Multiple calls to `WithPassword`/`WithPrivateKey*`/`WithAgent` all just append to that list.
+Several auth methods (password, key, agent) can be combined; the client tries each `ssh.AuthMethod` in order, same as the underlying `ssh` package. Multiple calls to `WithPassword`/`WithPrivateKey*`/`WithAgent` all just append to that list.
 
 ### Host key verification
 
