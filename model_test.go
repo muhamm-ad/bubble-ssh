@@ -17,7 +17,7 @@ func TestNewDefaults(t *testing.T) {
 	if m.term != "xterm-256color" {
 		t.Errorf("term = %q, want xterm-256color", m.term)
 	}
-	if m.state != stateConnecting {
+	if m.state != StateConnecting {
 		t.Errorf("state = %v, want stateConnecting", m.state)
 	}
 }
@@ -54,7 +54,7 @@ func TestTwoInstancesGetDistinctIDs(t *testing.T) {
 
 func TestUniqueOptionErrorSurfacesAtInit(t *testing.T) {
 	m := New("example.com", WithPrivateKeyFile("/nonexistent/path/id_ed25519", ""))
-	if m.state != stateError {
+	if m.state != StateError {
 		t.Fatalf("state = %v, want stateError after a bad option", m.state)
 	}
 	if m.setupErr == nil {

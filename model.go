@@ -48,7 +48,7 @@ type Model struct {
 	setupErr        error // first error raised by an Option, surfaced at Init()
 
 	// --- runtime state ---
-	state state
+	state State
 	err   error
 
 	client  *ssh.Client
@@ -77,13 +77,13 @@ func New(addr string, opts ...Option) Model {
 		height:         24,
 		connectTimeout: 10 * time.Second,
 		cursorShape:    CursorBar,
-		state:          stateConnecting,
+		state:          StateConnecting,
 	}
 	for _, opt := range opts {
 		opt(&m)
 	}
 	if m.setupErr != nil {
-		m.state = stateError
+		m.state = StateError
 		m.err = m.setupErr
 	}
 	return m
@@ -108,7 +108,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.id != m.id {
 			return m, nil
 		}
-		m.state = stateConnected
+		m.state = StateConnected
 		m.client = msg.client
 		m.session = msg.session
 		m.stdin = msg.stdin
@@ -131,7 +131,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.id != m.id {
 			return m, nil
 		}
-		m.state = stateClosed
+		m.state = StateClosed
 		m.err = msg.err
 		return m, nil
 
@@ -139,26 +139,26 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.id != m.id {
 			return m, nil
 		}
-		m.state = stateError
+		m.state = StateError
 		m.err = msg.err
 		return m, nil
 
 	case tea.KeyPressMsg:
-		if m.state == stateConnected {
+		if m.state == StateConnected {
 			m.scrollOffset = 0
 			m.sendKey(msg)
 		}
 		return m, nil
 
 	case tea.PasteMsg:
-		if m.state == stateConnected && m.vt != nil {
+		if m.state == StateConnected && m.vt != nil {
 			m.scrollOffset = 0
 			m.vt.Paste(msg.Content)
 		}
 		return m, nil
 
 	case tea.MouseMsg:
-		if m.state != stateConnected {
+		if m.state != StateConnected {
 			return m, nil
 		}
 		if m.mouseForwarding {
@@ -204,7 +204,7 @@ func (m Model) View() tea.View {
 // bigger layout instead, use this too and offset the position by wherever
 // you place that content on screen.
 func (m Model) Cursor() *tea.Cursor {
-	if m.state != stateConnected || m.vt == nil {
+	if m.state != StateConnected || m.vt == nil {
 		return nil
 	}
 	if m.scrollOffset > 0 {
@@ -237,11 +237,11 @@ func (m Model) Cursor() *tea.Cursor {
 func (m Model) Content() string {
 	var s string
 	switch m.state {
-	case stateConnecting:
+	case StateConnecting:
 		s = fmt.Sprintf("connecting to %s…", m.dialAddr())
-	case stateError:
+	case StateError:
 		s = fmt.Sprintf("ssh error: %v", m.err)
-	case stateClosed:
+	case StateClosed:
 		if m.err != nil && m.err != io.EOF {
 			s = fmt.Sprintf("connection closed: %v", m.err)
 		} else {
@@ -260,7 +260,9 @@ func (m Model) Content() string {
 }
 
 // Connected reports whether the SSH session is currently up.
-func (m Model) Connected() bool { return m.state == stateConnected }
+func (m Model) Connected() bool { return m.state == StateConnected }
+
+func (m Model) State() State { return m.state }
 
 // Err returns the last error (connection failure or unexpected close), if any.
 func (m Model) Err() error { return m.err }

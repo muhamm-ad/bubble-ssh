@@ -9,15 +9,15 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-// state is the internal connection lifecycle of a Model.
-type state int
+// State is the internal connection lifecycle of a Model.
+type State int
 
 const (
-	stateIdle state = iota
-	stateConnecting
-	stateConnected
-	stateClosed
-	stateError
+	StateIdle State = iota
+	StateConnecting
+	StateConnected
+	StateClosed
+	StateError
 )
 
 // Every internal message carries the id of the Model instance it belongs to.
