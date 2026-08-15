@@ -7,7 +7,7 @@ require (
 	github.com/charmbracelet/ultraviolet v0.0.0-20260703014108-f5a850f9c2b7
 	github.com/charmbracelet/x/ansi v0.11.7
 	github.com/charmbracelet/x/vt v0.0.0-20260730164118-7e2d3e6c5238
-	golang.org/x/crypto v0.54.0
+	golang.org/x/crypto v0.55.0
 )
 
 require (
