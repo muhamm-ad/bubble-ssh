@@ -8,6 +8,10 @@ updates:
       - "maintenance"
       - "dependencies"
       - "lazyssh"
+    groups:
+      lazyssh:
+        patterns:
+          - "*"
 
   - package-ecosystem: "github-actions"
     directory: "/"
@@ -17,20 +21,35 @@ updates:
     labels:
       - "dependencies"
       - "gh-actions"
+    groups:
+      github-actions:
+        patterns:
+          - "*"
 
   - package-ecosystem: "gomod"
-    directory: "/"
+    directories:
+      - "/"
+      - "/examples"
     schedule:
       interval: "weekly"
     labels:
       - "maintenance"
       - "dependencies"
-
-  - package-ecosystem: "gomod"
-    directory: "/examples"
-    schedule:
-      interval: "weekly"
-    labels:
-      - "maintenance"
-      - "dependencies"
-      - "examples"
+    groups:
+      charm:
+        patterns:
+          - "charm.land/*"
+          - "github.com/charmbracelet/*"
+        group-by: dependency-name
+      golang-x:
+        patterns:
+          - "golang.org/x/*"
+        group-by: dependency-name
+      other:
+        patterns:
+          - "*"
+        exclude-patterns:
+          - "charm.land/*"
+          - "github.com/charmbracelet/*"
+          - "golang.org/x/*"
+        group-by: dependency-name
