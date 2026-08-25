@@ -4,6 +4,7 @@ updates:
     directory: "/"
     schedule:
       interval: "daily"
+    target-branch: "dev"
     labels:
       - "maintenance"
       - "dependencies"
@@ -17,6 +18,7 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    target-branch: "dev"
     open-pull-requests-limit: 5
     labels:
       - "dependencies"
@@ -30,6 +32,7 @@ updates:
     directories:
       - "/"
       - "/examples"
+    target-branch: "dev"
     schedule:
       interval: "weekly"
     labels:

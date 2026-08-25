@@ -1,20 +1,30 @@
 name: Release
 
 on:
-  release:
-    types: [created]
+  push:
     tags:
       - "v[0-9]+.[0-9]+.[0-9]+"
-      - "**/v[0-9]+.[0-9]+.[0-9]+"
 
 permissions:
   contents: read
 
 jobs:
+  release:
+    name: Create GitHub release
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v3
+        with:
+          generate_release_notes: true
+
   pull:
-    name: Renew documentation
+    name: Warm Go module proxy
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - name: Pull new module version into the Go proxy cache
-        uses: andrewslotin/go-proxy-pull-action@master
+        uses: andrewslotin/go-proxy-pull-action@v1.5.0
