@@ -41,17 +41,17 @@ Examples live in their own Go module (`examples/go.mod`) so demo-only dependenci
 
 ```bash
 cd examples
-go run ./basic
-go run ./split-pane
+go run ./basic -addr <your-ssh-server> -user <your-username> -accept-new-host-keys ~/.ssh/known_hosts
+go run ./split-pane -addr <your-ssh-server> -user <your-username> -accept-new-host-keys ~/.ssh/known_hosts
 ```
 
 ### As the whole program
 
-See [`examples/basic`](./examples/basic) — wraps `bubblessh.Model` in a tiny root model that handles quitting on Ctrl+Q and forwards `tea.WindowSizeMsg` into `SetSize`. `bubblessh.Model` deliberately never calls `tea.Quit` itself or auto-tracks the window size, since it's also meant to be embedded — those are decisions for whatever owns the top-level program.
+See [`examples/basic`](./examples/basic/main.go) — wraps `bubblessh.Model` in a tiny root model that handles quitting on Ctrl+Q and forwards `tea.WindowSizeMsg` into `SetSize`. `bubblessh.Model` deliberately never calls `tea.Quit` itself or auto-tracks the window size, since it's also meant to be embedded — those are decisions for whatever owns the top-level program.
 
 ### Embedded as one pane among several
 
-See [`examples/split-pane`](./examples/split-pane) — two independent SSH sessions rendered side by side with [lipgloss](https://charm.land/lipgloss/v2), Tab to switch which one receives keystrokes. Every `bubblessh.Model` tags its internal async messages with its own instance id, so it's safe to `Update()` several instances with the same incoming message — each one ignores messages that aren't its own. Use `Content()` (a plain ANSI string) rather than `View()` (a `tea.View`) when composing a pane into a bigger layout.
+See [`examples/split-pane`](./examples/split-pane/main.go) — two independent SSH sessions rendered side by side with [lipgloss](https://charm.land/lipgloss/v2), Tab to switch which one receives keystrokes. Every `bubblessh.Model` tags its internal async messages with its own instance id, so it's safe to `Update()` several instances with the same incoming message — each one ignores messages that aren't its own. Use `Content()` (a plain ANSI string) rather than `View()` (a `tea.View`) when composing a pane into a bigger layout.
 
 ### A fuller reference app
 
