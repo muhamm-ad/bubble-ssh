@@ -55,6 +55,19 @@ type Model struct {
 	session *ssh.Session
 	stdin   io.WriteCloser
 	vt      *vt.Emulator
+	// resizeSnap is a logical-line copy of the live screen, kept across a
+	// shrink/grow so we can reflow after ultraviolet's destructive Resize.
+	// Cleared when new remote output arrives. Pointer so Model-by-value
+	// copies share the same capture for the duration of a resize gesture.
+	resizeSnap *resizeSnap
+	// ptyCols/ptyRows are the last size we sent to the remote via
+	// WindowChange, used to ignore duplicate debounce ticks.
+	ptyCols, ptyRows int
+	// eatWinchNewline is set when we notify the remote PTY of a new size on
+	// the primary screen. The next output chunk often starts with the
+	// newline readline emits on SIGWINCH; we drop that one so it doesn't
+	// look like Enter was pressed.
+	eatWinchNewline bool
 	// cursorVisible mirrors the vt.Callbacks.CursorVisibility state set up
 	// in connect() — see connectedMsg for why it's a pointer.
 	cursorVisible *bool
@@ -116,16 +129,56 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.cursorVisible = msg.cursorVisible
 		m.outCh = msg.outCh
 		m.cancel = msg.cancel
+		m.ptyCols, m.ptyRows = m.width, m.height
 		return m, waitForActivity(m.id, m.outCh)
 
 	case outputMsg:
 		if msg.id != m.id {
 			return m, nil
 		}
-		if m.vt != nil {
-			_, _ = m.vt.Write(msg.data)
+		data := msg.data
+		if m.eatWinchNewline {
+			m.eatWinchNewline = false
+			stripped := stripLeadingCRLF(data)
+			if len(stripped) != len(data) && m.vt != nil {
+				pos := m.vt.CursorPosition()
+				moveCursorToLineStart(m.vt, pos.Y)
+			}
+			data = stripped
 		}
+		if m.vt != nil {
+			_, _ = m.vt.Write(data)
+		}
+		// Fresh bytes from the remote are the new source of truth; the
+		// pre-resize snapshot would paint stale cells over them.
+		m.resizeSnap = nil
 		return m, waitForActivity(m.id, m.outCh)
+
+	case windowChangeMsg:
+		if msg.id != m.id || m.session == nil {
+			return m, nil
+		}
+		// A newer SetSize has already been applied locally — this tick is
+		// leftover from an in-between size during a drag.
+		if m.width != msg.cols || m.height != msg.rows {
+			return m, nil
+		}
+		if m.ptyCols == msg.cols && m.ptyRows == msg.rows {
+			return m, nil
+		}
+		m.ptyCols, m.ptyRows = msg.cols, msg.rows
+		if m.vt == nil || !m.vt.IsAltScreen() {
+			m.eatWinchNewline = true
+		}
+		sess := m.session
+		id := m.id
+		cols, rows := msg.cols, msg.rows
+		return m, func() tea.Msg {
+			if err := sess.WindowChange(rows, cols); err != nil {
+				return errMsg{id: id, err: err}
+			}
+			return nil
+		}
 
 	case closedMsg:
 		if msg.id != m.id {
@@ -272,6 +325,12 @@ func (m Model) Err() error { return m.err }
 // tea.WindowSizeMsg yourself if this pane should track the full window —
 // it's not done automatically since an embedded pane is often smaller than
 // the whole screen.
+//
+// ultraviolet's Buffer.Resize is destructive (it truncates cells on shrink
+// and pads blanks on grow). SetSize snapshots the live screen first and
+// paints a wrapped copy back afterwards, so shrinking then growing the
+// pane restores the characters that fell outside the smaller size. See
+// docs/terminal-resize-data-loss.md.
 func (m Model) SetSize(cols, rows int) (Model, tea.Cmd) {
 	if cols < 1 {
 		cols = 1
@@ -279,18 +338,33 @@ func (m Model) SetSize(cols, rows int) (Model, tea.Cmd) {
 	if rows < 1 {
 		rows = 1
 	}
-	m.width, m.height = cols, rows
-	if m.vt != nil {
-		m.vt.Resize(cols, rows)
+	if m.vt != nil && m.vt.Width() == cols && m.vt.Height() == rows && m.width == cols && m.height == rows {
+		return m, nil
 	}
-	if m.session != nil {
-		sess := m.session
-		return m, func() tea.Msg {
-			_ = sess.WindowChange(rows, cols)
-			return nil
+	if m.vt != nil {
+		m = m.reflowAfterResize(cols, rows)
+	}
+	m.width, m.height = cols, rows
+	if m.session == nil {
+		return m, nil
+	}
+	return m, m.windowChangeCmd(cols, rows)
+}
+
+// windowChangeCmd notifies the remote PTY of the new size. Full-screen
+// apps need that immediately; a shell on the primary screen gets a debounced
+// request so a drag doesn't SIGWINCH on every pixel (readline prints a
+// newline + prompt each time, which looks like Enter).
+func (m Model) windowChangeCmd(cols, rows int) tea.Cmd {
+	id := m.id
+	if m.vt != nil && m.vt.IsAltScreen() {
+		return func() tea.Msg {
+			return windowChangeMsg{id: id, cols: cols, rows: rows}
 		}
 	}
-	return m, nil
+	return tea.Tick(windowChangeDebounce, func(time.Time) tea.Msg {
+		return windowChangeMsg{id: id, cols: cols, rows: rows}
+	})
 }
 
 // Close tears down the SSH session and the underlying TCP connection. Call

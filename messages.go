@@ -3,11 +3,19 @@ package bubblessh
 import (
 	"context"
 	"io"
+	"time"
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/charmbracelet/x/vt"
 	"golang.org/x/crypto/ssh"
 )
+
+// windowChangeDebounce waits for a resize gesture to pause before telling
+// the remote PTY. Windows emits WindowSizeMsg far slower than 50ms apart
+// during a drag, so a short delay still sends SIGWINCH many times — and
+// bash/readline prints a newline + prompt on each one, which looks like
+// Enter after every resize.
+const windowChangeDebounce = 200 * time.Millisecond
 
 // State is the internal connection lifecycle of a Model.
 type State int
@@ -59,4 +67,11 @@ type closedMsg struct {
 type errMsg struct {
 	id  uint64
 	err error
+}
+
+// windowChangeMsg is delivered after SetSize's debounce so we can send a
+// single SSH window-change at the size the pane actually settled on.
+type windowChangeMsg struct {
+	id         uint64
+	cols, rows int
 }
