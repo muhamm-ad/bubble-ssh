@@ -5,6 +5,10 @@ import (
 	uv "github.com/charmbracelet/ultraviolet"
 )
 
+// lockMods are keyboard lock-state flags, not chords. Windows in particular
+// often reports NumLock alongside ordinary letter keys.
+const lockMods = uv.ModShift | uv.ModCapsLock | uv.ModNumLock | uv.ModScrollLock
+
 // sendKey converts a Bubble Tea key event into the ultraviolet key event
 // type the vt.Emulator expects, and lets the emulator do the actual VT100/
 // xterm encoding (including cursor-key application-mode, etc.) — the
@@ -21,6 +25,14 @@ func (m Model) sendKey(msg tea.KeyPressMsg) {
 		return
 	}
 	k := msg.Key()
+	// vt.SendKey only emits a printable rune when Mod == 0, so Shift/CapsLock
+	// letters ("A") and shifted symbols ("!") are dropped. When the event
+	// already carries the produced text and isn't a ctrl/alt chord, send that
+	// text straight to the PTY.
+	if text := printableKeyText(k); text != "" {
+		m.vt.SendText(text)
+		return
+	}
 	m.vt.SendKey(uv.KeyPressEvent{
 		Text:        k.Text,
 		Mod:         uv.KeyMod(k.Mod),
@@ -29,4 +41,16 @@ func (m Model) sendKey(msg tea.KeyPressMsg) {
 		BaseCode:    k.BaseCode,
 		IsRepeat:    k.IsRepeat,
 	})
+}
+
+// printableKeyText is the characters a key should type into the remote PTY.
+// Empty for special keys (enter, arrows) and for real chords (ctrl/alt/…).
+func printableKeyText(k tea.Key) string {
+	if k.Text == "" {
+		return ""
+	}
+	if uv.KeyMod(k.Mod)&^lockMods != 0 {
+		return ""
+	}
+	return k.Text
 }
