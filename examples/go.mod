@@ -1,6 +1,6 @@
 module examples
 
-go 1.25.0
+go 1.26.0
 
 // Always build the examples against the in-repo version of the library,
 // not a published release — mirrors what https://github.com/charmbracelet/bubbletea itself does for its own examples/go.mod.
@@ -10,7 +10,7 @@ require (
 	charm.land/bubbletea/v2 v2.0.9
 	charm.land/lipgloss/v2 v2.0.6
 	github.com/muhamm-ad/bubble-ssh v0.1.0
-	golang.org/x/term v0.45.0
+	golang.org/x/term v0.46.0
 )
 
 require (
@@ -31,5 +31,5 @@ require (
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
 	golang.org/x/crypto v0.55.0 // indirect
 	golang.org/x/sync v0.22.0 // indirect
-	golang.org/x/sys v0.47.0 // indirect
+	golang.org/x/sys v0.48.0 // indirect
 )
