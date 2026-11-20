@@ -7,7 +7,7 @@ go 1.26.0
 replace github.com/muhamm-ad/bubble-ssh => ../
 
 require (
-	charm.land/bubbletea/v2 v2.1.0
+	charm.land/bubbletea/v2 v2.1.1
 	charm.land/lipgloss/v2 v2.0.6
 	github.com/muhamm-ad/bubble-ssh v0.1.0
 	golang.org/x/term v0.46.0
